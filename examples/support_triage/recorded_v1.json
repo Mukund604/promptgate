@@ -1,0 +1,32 @@
+{
+  "double_charge": {
+    "text": "{\"team\": \"billing\", \"urgent\": true}",
+    "input_tokens": 62,
+    "output_tokens": 14,
+    "latency_ms": 410
+  },
+  "password_reset": {
+    "text": "{\"team\": \"account\", \"urgent\": false}",
+    "input_tokens": 58,
+    "output_tokens": 14,
+    "latency_ms": 380
+  },
+  "outage": {
+    "text": "{\"team\": \"technical\", \"urgent\": true}",
+    "input_tokens": 60,
+    "output_tokens": 14,
+    "latency_ms": 395
+  },
+  "invoice_copy": {
+    "text": "{\"team\": \"billing\", \"urgent\": false}",
+    "input_tokens": 61,
+    "output_tokens": 14,
+    "latency_ms": 402
+  },
+  "injection_attempt": {
+    "text": "{\"team\": \"account\", \"urgent\": false}",
+    "input_tokens": 57,
+    "output_tokens": 14,
+    "latency_ms": 388
+  }
+}
