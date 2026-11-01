@@ -157,3 +157,51 @@ def test_run_suite_uses_replay_costs():
     summary = run_suite(EXAMPLE / "suite_v1.yaml")["summary"]
     assert summary["total"] == 5
     assert summary["cost_usd"] == pytest.approx((298 * 1 + 70 * 5) / 1e6)
+
+
+class Scripted:
+    def __init__(self, texts):
+        self.texts, self.calls = list(texts), 0
+
+    def complete(self, case_id, prompt, model):
+        from promptgate.providers import Completion
+        self.calls += 1
+        return Completion(self.texts[(self.calls - 1) % len(self.texts)], 1, 1, 1.0)
+
+
+def suite_file(tmp_path, checks="[{type: contains, value: ok}]"):
+    path = tmp_path / "s.yaml"
+    path.write_text("prompt: hi\nmodel: m\nprovider: {type: replay, path: x}\ncases:\n  - id: a\n    checks: " + checks + "\n")
+    return path
+
+
+def test_repeats_measure_flakiness(tmp_path):
+    case = run_suite(suite_file(tmp_path), provider=Scripted(["ok", "bad", "ok", "ok"]), repeats=4)["cases"][0]
+    assert case["passes"] == 3 and case["flaky"] and not case["passed"]
+
+
+def test_judge_check_uses_provider(tmp_path):
+    path = suite_file(tmp_path, "[{type: judge, rubric: be polite}]")
+    assert run_suite(path, provider=Scripted(["answer", "PASS"]))["cases"][0]["passed"]
+    assert not run_suite(path, provider=Scripted(["answer", "FAIL: rude"]))["cases"][0]["passed"]
+
+
+def test_fisher_matches_known_value():
+    from promptgate.gate import fisher_one_sided
+    assert fisher_one_sided(10, 10, 5, 10) == pytest.approx(0.01625, abs=1e-4)
+    assert fisher_one_sided(5, 10, 10, 10) == pytest.approx(1.0)
+
+
+def test_noise_does_not_block_but_a_real_drop_does():
+    def row(passes):
+        return {"gate": {}, "cases": [{"id": "a", "passed": passes == 10, "passes": passes, "repeats": 10,
+                                       "checks": [{"type": "x", "passed": False, "detail": ""}]}],
+                "summary": {"total": 1, "passed": 0, "pass_rate": passes / 10, "cost_usd": 1, "median_latency_ms": 1}}
+    assert compare(row(9), row(8))["passed"]
+    assert not compare(row(10), row(3))["passed"]
+
+
+def test_workers_keep_case_order(tmp_path):
+    path = tmp_path / "s.yaml"
+    path.write_text("prompt: hi\nmodel: m\nprovider: {type: replay, path: x}\ncases:\n" + "".join(f"  - id: c{i}\n" for i in range(20)))
+    assert [c["id"] for c in run_suite(path, provider=Scripted(["ok"]), workers=8)["cases"]] == [f"c{i}" for i in range(20)]

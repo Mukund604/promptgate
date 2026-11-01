@@ -13,13 +13,17 @@ def main(argv=None):
     run = sub.add_parser("run", help="run a suite and save the result as JSON")
     run.add_argument("suite")
     run.add_argument("--out", required=True)
+    run.add_argument("--repeats", type=int)
+    run.add_argument("--workers", type=int, default=1)
     check = sub.add_parser("check", help="run a suite and gate it against a baseline")
     check.add_argument("suite")
     check.add_argument("--baseline", required=True)
+    check.add_argument("--repeats", type=int)
+    check.add_argument("--workers", type=int, default=1)
     check.add_argument("--report", help="write the Markdown report here, for example a PR comment file")
     args = parser.parse_args(argv)
 
-    result = run_suite(args.suite)
+    result = run_suite(args.suite, repeats=args.repeats, workers=args.workers)
     if args.command == "run":
         pathlib.Path(args.out).write_text(json.dumps(result, indent=2))
         s = result["summary"]
